@@ -1,5 +1,5 @@
 from socket import *
-
+#Hi this is a push attempt
 def openSocket():
     try:
         icmp_socket = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_ICMP)
