@@ -66,7 +66,7 @@ def receivePing(openSocket, curID, timeout):
 
         if icmpType != 0: #If not an echo reply
             print("Error: ICMP Type", icmpType, "Code", code)
-            return -1 #error handling return
+            return -1 #failed packet return
         if icmpType == 0 and packetID == curID: #If echo reply and part of current socket
             bytesInDouble = struct.calcsize("d")
             timeSent = struct.unpack("d", recPacket[28:28 + bytesInDouble])[0]
@@ -74,7 +74,7 @@ def receivePing(openSocket, curID, timeout):
 
     except TimeoutError:
         print("Ping timed out.")
-        return -1 #error handling return
+        return -1 #failed packet return
 
 def pingCycle(dest, timeout):
     myID = os.getpid() & 0xFFFF
@@ -96,16 +96,15 @@ def ping(host, timeout=1):
     #Ping loop ended with ctrl^c to escape. Also calculates out TTS statistics to display on exit
     while True:
         try:
-
             delay = pingCycle(dest, timeout)
             totalPingCount += 1
             if delay  == -1:
                 failedPingCount += 1
                 continue
-            delay = int(round(delay,3) * 1000)
-            if totalPingCount == 1:
+            delay = int(round(delay,3) * 1000) #convert delay to ms
+            if totalPingCount == 1: #initializing min and max to first packet delay
                 minimun, maximum = delay, delay
-            total += delay
+            total += delay #adding to total for average
             if delay < minimun:
                 minimun = delay
             if delay > maximum:
@@ -118,6 +117,6 @@ def ping(host, timeout=1):
             print("Approximate round trip times in milli-seconds:")
             print(f"Minimum = {minimun}ms, Maximum = {maximum}, Average = {int(total/totalPingCount)}")
             break
-#destination = str(input("Enter an address to ping: "))
-destination = "10.255.255.1"
+destination = str(input("Enter an address to ping: "))
+#destination = "10.255.255.1"
 ping(destination)
