@@ -119,6 +119,8 @@ def pingCycle(dest, timeout):
     #         break
 ## May be a bit ambitious, but I opted to bring the entire ping functionality into main. Helps with error handling and endless loops
 
+
+#K: Added a main function! WooHoo!!!!
 def main():
     try:
         destination = input("Enter an address to ping: ")
@@ -135,10 +137,9 @@ def main():
     maximum = None
 
     try:
-        # Allow user to specify a finite number of pings, e.g., 4 pings
-        num_pings = int(input("Enter the number of pings: "))
+        num_pings = int(input("Enter the number of pings: ")) # K: Allow user to specify a finite number of pings, e.g., 4 pings
         if (num_pings < 1):
-            raise ValueError #Throw error if attempting to ping 0 or less times (except right below)
+            raise ValueError #K: Throw error if attempting to ping 0 or less times (except right below)
     except ValueError:
         print("Invalid input. Defaulting to 4 pings.")
         num_pings = 4
@@ -172,5 +173,6 @@ def main():
     print(f"  Success rate: {100 - int((failedPingCount/totalPingCount) * 100)}%")
     print(f"  Minimum = {minimum}ms, Maximum = {maximum}ms, Average = {average}ms")
 
+#K: Redundant comment is redundant. start main :)
 if __name__ == "__main__":
     main()
