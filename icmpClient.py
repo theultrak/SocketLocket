@@ -39,7 +39,7 @@ def packetConstruction(myID):
     #print("Constructing packet")
     packetCheckSum = 0
     header = struct.pack("bbHHh", 8, 0, packetCheckSum, myID, 1) #build packet with dummy checksum
-    data = struct.pack("d", time())
+    data = struct.pack("d", perf_counter()) #KODY: Attempting to resolve 0.0ms pings. All 'time()' calls replaced with 'perf_counter()'
     
     packetCheckSum = checkSum(header + data) #get checksum of dummy packet
     packetCheckSum = htons(packetCheckSum) #converted to network bit order
@@ -59,7 +59,7 @@ def receivePing(openSocket, curID, timeout):
     #Receive data with timeout handling
     try:
         recPacket, addr = openSocket.recvfrom(1024) #waits for packet receival
-        timeReceived = time() #get time to calculate delay
+        timeReceived = perf_counter() #get time to calculate delay #KODY: Attempting to resolve 0.0ms pings. All 'time()' calls replaced with 'perf_counter()'
 
         icmpHeader = recPacket[20:28] #prunes header from bit 160-224 of the packet
         icmpType, code, mychecksum, packetID, sequence = struct.unpack("bbHHh", icmpHeader) #Remove data from pruned header
@@ -85,38 +85,92 @@ def pingCycle(dest, timeout):
     pingSocket.close()
     return delay
 
-def ping(host, timeout=1):
-    dest = gethostbyname(host)  # Resolve hostname to IP
-    print("Pinging " + dest + " now:\n")
+# def ping(host, timeout=1):
+    # dest = gethostbyname(host)  # Resolve hostname to IP
+    # print("Pinging " + dest + " now:\n")
+    # total = 0
+    # totalPingCount = 0
+    # failedPingCount = 0
+    # minimun = 0
+    # maximum = 0
+    # #Ping loop ended with ctrl^c to escape. Also calculates out TTS statistics to display on exit
+    # while True:
+    #     try:
+    #         delay = pingCycle(dest, timeout)
+    #         totalPingCount += 1
+    #         if delay  == -1:
+    #             failedPingCount += 1
+    #             continue
+    #         delay = int(round((delay*1000), 3)) #convert delay to ms   #KODY: Kept getting 0ms pings when rounding before conversion. Decided to convert to ms and then round afterwards.
+    #         if totalPingCount == 1: #initializing min and max to first packet delay
+    #             minimun, maximum = delay, delay
+    #         total += delay #adding to total for average
+    #         if delay < minimun:
+    #             minimun = delay
+    #         if delay > maximum:
+    #             maximum = delay
+    #         print(f"{delay}ms TTS")
+    #         sleep(1)
+    #     except KeyboardInterrupt:
+    #         print("\nPing stopped.")
+    #         print(f"Ping success rate: {totalPingCount - failedPingCount}/{totalPingCount} = {100 - int(failedPingCount/totalPingCount * 100)}%")
+    #         print("Approximate round trip times in milli-seconds:")
+    #         print(f"Minimum = {minimun}ms, Maximum = {maximum}, Average = {int(total/totalPingCount)}")
+    #         break
+## May be a bit ambitious, but I opted to bring the entire ping functionality into main. Helps with error handling and endless loops
+
+def main():
+    try:
+        destination = input("Enter an address to ping: ")
+        dest = gethostbyname(destination)
+    except Exception as e:
+        print(f"Error resolving address '{destination}': {e}")
+        return
+
+    print(f"Pinging {dest} now:\n")
     total = 0
     totalPingCount = 0
     failedPingCount = 0
-    minimun = 0
-    maximum = 0
-    #Ping loop ended with ctrl^c to escape. Also calculates out TTS statistics to display on exit
-    while True:
-        try:
-            delay = pingCycle(dest, timeout)
-            totalPingCount += 1
-            if delay  == -1:
-                failedPingCount += 1
-                continue
-            delay = int(round(delay,3) * 1000) #convert delay to ms
-            if totalPingCount == 1: #initializing min and max to first packet delay
-                minimun, maximum = delay, delay
-            total += delay #adding to total for average
-            if delay < minimun:
-                minimun = delay
-            if delay > maximum:
-                maximum = delay
-            print(f"{delay}ms TTS")
-            sleep(1)
-        except KeyboardInterrupt:
-            print("\nPing stopped.")
-            print(f"Ping success rate: {totalPingCount - failedPingCount}/{totalPingCount} = {100 - int(failedPingCount/totalPingCount * 100)}%")
-            print("Approximate round trip times in milli-seconds:")
-            print(f"Minimum = {minimun}ms, Maximum = {maximum}, Average = {int(total/totalPingCount)}")
-            break
-destination = str(input("Enter an address to ping: "))
-#destination = "10.255.255.1"
-ping(destination)
+    minimum = None
+    maximum = None
+
+    try:
+        # Allow user to specify a finite number of pings, e.g., 4 pings
+        num_pings = int(input("Enter the number of pings: "))
+        if (num_pings < 1):
+            raise ValueError #Throw error if attempting to ping 0 or less times (except right below)
+    except ValueError:
+        print("Invalid input. Defaulting to 4 pings.")
+        num_pings = 4
+
+    for _ in range(num_pings):
+        delay = pingCycle(dest, timeout=1)
+       # print('\n') 
+        #print(delay * 1000)
+        totalPingCount += 1
+        if delay == -1:
+            failedPingCount += 1
+        else:
+            delay_ms = round((delay * 1000),3) # KODY: Same change I made in ping(). Convert first, round after.
+            if minimum is None or delay_ms < minimum:
+                minimum = delay_ms
+            if maximum is None or delay_ms > maximum:
+                maximum = delay_ms
+            total += delay_ms
+            print(f"{delay_ms}ms round-trip time")
+        sleep(1)
+
+    # Display summary statistics
+    if totalPingCount - failedPingCount > 0:
+        average = int(total / (totalPingCount - failedPingCount))
+    else:
+        average = 0
+
+    print("\nPing statistics:")
+    print(f"  Pings sent: {totalPingCount}")
+    print(f"  Pings received: {totalPingCount - failedPingCount}")
+    print(f"  Success rate: {100 - int((failedPingCount/totalPingCount) * 100)}%")
+    print(f"  Minimum = {minimum}ms, Maximum = {maximum}ms, Average = {average}ms")
+
+if __name__ == "__main__":
+    main()
