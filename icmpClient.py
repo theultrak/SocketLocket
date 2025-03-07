@@ -3,6 +3,19 @@ from time import *
 import struct
 import os
 
+icmp_errors = {
+    (3, 0): "Destination Network Unreachable",
+    (3, 1): "Destination Host Unreachable",
+    (3, 2): "Protocol Unreachable",
+    (3, 3): "Port Unreachable",
+    (3, 4): "Fragmentation Needed and DF Set",
+    (3, 5): "Source Route Failed",
+    (11, 0): "Time Exceeded: TTL Expired in Transit",
+    (11, 1): "Time Exceeded: Fragment Reassembly Time Exceeded",
+    (12, 0): "Parameter Problem: Pointer Indicates the Error",
+    (12, 1): "Parameter Problem: Missing a Required Option"
+    }
+
 def openSocket():
     try:
         icmp_socket = socket(AF_INET, SOCK_RAW, getprotobyname("icmp") ) #raw socket opening.
@@ -65,7 +78,11 @@ def receivePing(openSocket, curID, timeout):
         icmpType, code, mychecksum, packetID, sequence = struct.unpack("bbHHh", icmpHeader) #Remove data from pruned header
 
         if icmpType != 0: #If not an echo reply
-            print("Error: ICMP Type", icmpType, "Code", code)
+            error_pair = (icmpType, code)
+            if error_pair in icmp_errors:
+                print(icmp_errors[error_pair])
+            else:
+                print("Error: ICMP Type", icmpType, "Code", code)
             return -1 #failed packet return
         if icmpType == 0 and packetID == curID: #If echo reply and part of current socket
             bytesInDouble = struct.calcsize("d")
@@ -163,7 +180,7 @@ def main():
 
     # Display summary statistics
     if totalPingCount - failedPingCount > 0:
-        average = int(total / (totalPingCount - failedPingCount))
+        average = float(total / (totalPingCount - failedPingCount))
     else:
         average = 0
 
